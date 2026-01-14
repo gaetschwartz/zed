@@ -134,6 +134,10 @@ impl OpenRequest {
                 this.parse_git_commit_url(commit_path)?
             } else if url.starts_with("ssh://") {
                 this.parse_ssh_file_path(&url, cx)?
+            } else if url.starts_with("wsl://") {
+                this.parse_wsl_url(&url)?
+            } else if url.starts_with("docker://") {
+                this.parse_docker_url(&url)?
             } else if let Some(zed_link) = parse_zed_link(&url, cx) {
                 match zed_link {
                     ZedLink::Channel { channel_id } => {
@@ -228,6 +232,37 @@ impl OpenRequest {
             );
         }
         self.remote_connection = Some(connection_options);
+        self.parse_file_path(url.path());
+        Ok(())
+    }
+
+    fn parse_wsl_url(&mut self, url_str: &str) -> Result<()> {
+        let url = url::Url::parse(url_str)?;
+        let distro = url
+            .host_str()
+            .context("missing distro in wsl:// URL")?
+            .to_string();
+        self.remote_connection = Some(RemoteConnectionOptions::Wsl(WslConnectionOptions {
+            distro_name: distro,
+            user: None,
+        }));
+        self.parse_file_path(url.path());
+        Ok(())
+    }
+
+    fn parse_docker_url(&mut self, url_str: &str) -> Result<()> {
+        use remote::DockerConnectionOptions;
+
+        let url = url::Url::parse(url_str)?;
+        let container = url
+            .host_str()
+            .context("missing container in docker:// URL")?
+            .to_string();
+        self.remote_connection = Some(RemoteConnectionOptions::Docker(DockerConnectionOptions {
+            name: container.clone(),
+            container_id: container,
+            upload_binary_over_docker_exec: false,
+        }));
         self.parse_file_path(url.path());
         Ok(())
     }

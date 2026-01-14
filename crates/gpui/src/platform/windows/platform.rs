@@ -220,8 +220,8 @@ impl WindowsPlatform {
     fn update_jump_list(
         &self,
         menus: Vec<MenuItem>,
-        entries: Vec<SmallVec<[PathBuf; 2]>>,
-    ) -> Vec<SmallVec<[PathBuf; 2]>> {
+        entries: Vec<JumpListEntry>,
+    ) -> Vec<JumpListEntry> {
         let mut actions = Vec::new();
         menus.into_iter().for_each(|menu| {
             if let Some(dock_menu) = DockMenuItem::new(menu).log_err() {
@@ -725,8 +725,8 @@ impl Platform for WindowsPlatform {
     fn update_jump_list(
         &self,
         menus: Vec<MenuItem>,
-        entries: Vec<SmallVec<[PathBuf; 2]>>,
-    ) -> Vec<SmallVec<[PathBuf; 2]>> {
+        entries: Vec<JumpListEntry>,
+    ) -> Vec<JumpListEntry> {
         self.update_jump_list(menus, entries)
     }
 }

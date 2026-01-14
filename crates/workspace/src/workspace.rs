@@ -5707,13 +5707,18 @@ impl Workspace {
         let Some(id) = self.database_id() else {
             return;
         };
-        if !self.project.read(cx).is_local() {
+        let project = self.project.read(cx);
+        let location = if let Some(connection) = project.remote_connection_options(cx) {
+            SerializedWorkspaceLocation::Remote(connection)
+        } else if project.is_local() {
+            SerializedWorkspaceLocation::Local
+        } else {
             return;
-        }
+        };
         if let Some(manager) = HistoryManager::global(cx) {
             let paths = PathList::new(&self.root_paths(cx));
             manager.update(cx, |this, cx| {
-                this.update_history(id, HistoryManagerEntry::new(id, &paths), cx);
+                this.update_history(id, HistoryManagerEntry::new(id, location.clone(), &paths), cx);
             });
         }
     }

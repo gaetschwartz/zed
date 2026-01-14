@@ -74,6 +74,67 @@ use std::{
 use strum::EnumIter;
 use uuid::Uuid;
 
+/// Represents an entry in the Windows Jump List for recent workspaces.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum JumpListEntry {
+    /// A local workspace with one or more paths.
+    Local(SmallVec<[PathBuf; 2]>),
+    /// A remote workspace (SSH, WSL, or Docker).
+    Remote {
+        /// Connection details for the remote workspace.
+        connection: RemoteConnectionInfo,
+        /// The paths within the remote workspace.
+        paths: SmallVec<[PathBuf; 2]>,
+    },
+}
+
+/// Connection details for remote jump list entries.
+/// Each variant contains what's needed to generate proper scheme URLs.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RemoteConnectionInfo {
+    /// SSH connection to a remote host.
+    Ssh {
+        /// Username for the SSH connection.
+        username: Option<String>,
+        /// Hostname of the remote server.
+        host: String,
+        /// Port number (if non-default).
+        port: Option<u16>,
+    },
+    /// Windows Subsystem for Linux connection.
+    Wsl {
+        /// Name of the WSL distribution.
+        distro: String,
+        /// Username within the WSL environment.
+        user: Option<String>,
+    },
+    /// Docker container connection.
+    Docker {
+        /// Name of the Docker container.
+        name: String,
+    },
+}
+
+impl RemoteConnectionInfo {
+    /// Returns the display identifier (e.g., "host" for SSH, "distro" for WSL).
+    pub fn display_identifier(&self) -> &str {
+        match self {
+            Self::Ssh { host, .. } => host,
+            Self::Wsl { distro, .. } => distro,
+            Self::Docker { name } => name,
+        }
+    }
+
+    /// Returns the scheme name for display (e.g., "ssh", "wsl", "docker").
+    pub fn scheme(&self) -> &'static str {
+        match self {
+            Self::Ssh { .. } => "ssh",
+            Self::Wsl { .. } => "wsl",
+            Self::Docker { .. } => "docker",
+        }
+    }
+}
+
 pub use app_menu::*;
 pub use keyboard::*;
 pub use keystroke::*;
@@ -255,8 +316,8 @@ pub(crate) trait Platform: 'static {
     fn update_jump_list(
         &self,
         _menus: Vec<MenuItem>,
-        _entries: Vec<SmallVec<[PathBuf; 2]>>,
-    ) -> Vec<SmallVec<[PathBuf; 2]>> {
+        _entries: Vec<JumpListEntry>,
+    ) -> Vec<JumpListEntry> {
         Vec::new()
     }
     fn on_app_menu_action(&self, callback: Box<dyn FnMut(&dyn Action)>);
